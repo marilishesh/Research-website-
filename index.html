@@ -1,1 +1,446 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, FileText, Copy, AlertCircle, Check, BookOpen, Terminal, Trash2, Loader2, Link2 } from 'lucide-react';
+
+export default function App() {
+  const [query, setQuery] = useState("");
+  const [mode, setMode] = useState("summary"); // 'summary' or 'essay'
+  const [essayLength, setEssayLength] = useState("medium"); // 'short', 'medium', 'long'
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [result, setResult] = useState("");
+  const [sources, setSources] = useState([]);
+  const [copied, setCopied] = useState(false);
+  
+  const [logs, setLogs] = useState([]);
+  const logsEndRef = useRef(null);
+
+  // System instructions for the model
+  const apiKey = ""; // API key is provided by the execution environment
+
+  // Intercept console.error to show in our on-screen logger
+  useEffect(() => {
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      addLog(`Console Error: ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`, 'error');
+      originalConsoleError(...args);
+    };
+    return () => {
+      console.error = originalConsoleError;
+    };
+  }, []);
+
+  // Auto-scroll logs
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
+
+  const addLog = (msg, type = "info") => {
+    setLogs(prev => [...prev, { id: Date.now() + Math.random(), time: new Date().toLocaleTimeString(), msg, type }]);
+  };
+
+  const clearLogs = () => setLogs([]);
+
+  // Exponential backoff fetch
+  const fetchWithRetry = async (url, options, maxRetries = 5) => {
+    const delays = [1000, 2000, 4000, 8000, 16000];
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(`HTTP ${response.status}: ${errData.error?.message || 'Unknown API Error'}`);
+        }
+        return await response.json();
+      } catch (error) {
+        if (i === maxRetries - 1) throw error;
+        // Don't log retries to the UI logger to avoid cluttering, but wait and retry
+        await new Promise(resolve => setTimeout(resolve, delays[i]));
+      }
+    }
+  };
+
+  const handleResearch = async () => {
+    if (!query.trim()) {
+      addLog("Please enter a question or topic to research.", "warning");
+      return;
+    }
+
+    setIsLoading(true);
+    setResult("");
+    setSources([]);
+    setCopied(false);
+    addLog(`Starting research for: "${query}" (Mode: ${mode})`, "info");
+
+    try {
+      let systemPrompt = "";
+      if (mode === "summary") {
+        systemPrompt = "You are a highly capable research assistant. Answer the user's question with a concise, accurate, and highly relevant summary. Prioritize factual accuracy and use the Google Search tool to find the most up-to-date information. Synthesize the findings into an easy-to-read format.";
+      } else {
+        const lengthGuides = {
+          short: "around 300-500 words",
+          medium: "around 600-900 words",
+          long: "around 1000-1500 words (very comprehensive)"
+        };
+        systemPrompt = `You are an expert academic essayist and researcher. Write a comprehensive essay answering the user's question. The desired length is ${lengthGuides[essayLength]}. 
+        Structure the essay properly with an introduction, well-developed body paragraphs, and a clear conclusion. 
+        You MUST use the Google Search tool to gather accurate data, cite facts implicitly, and ensure high relevance to the prompt. Use markdown for headings and formatting.`;
+      }
+
+      const payload = {
+        contents: [{ parts: [{ text: query }] }],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        tools: [{ google_search: {} }],
+        generationConfig: {
+            temperature: 0.2 // Low temperature for more factual responses
+        }
+      };
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      
+      const data = await fetchWithRetry(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      // Parse text
+      const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!textResponse) {
+          throw new Error("API returned an empty or malformed response.");
+      }
+      setResult(textResponse);
+
+      // Parse grounding sources
+      const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
+      if (groundingMetadata?.groundingAttributions) {
+          const uniqueSources = [];
+          const seenUris = new Set();
+          
+          groundingMetadata.groundingAttributions.forEach(attr => {
+              const uri = attr.web?.uri;
+              const title = attr.web?.title;
+              if (uri && !seenUris.has(uri)) {
+                  seenUris.add(uri);
+                  uniqueSources.push({ uri, title: title || uri });
+              }
+          });
+          setSources(uniqueSources);
+          addLog(`Research complete. Found ${uniqueSources.length} sources.`, "success");
+      } else {
+          addLog("Research complete. Note: No specific web sources were cited in the metadata.", "success");
+      }
+
+    } catch (error) {
+      addLog(`Research failed: ${error.message}`, "error");
+      setResult(`**An error occurred while researching.**\n\n${error.message}\n\nPlease check the error logger at the bottom of the page for more details.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (!result) return;
+    
+    // Using execCommand for broad iFrame compatibility as requested
+    const textArea = document.createElement("textarea");
+    textArea.value = result;
+    document.body.appendChild(textArea);
+    textArea.select();
+    
+    try {
+      document.execCommand('copy');
+      setCopied(true);
+      addLog("Content successfully copied to clipboard.", "info");
+      setTimeout(() => setCopied(false), 3000);
+    } catch (err) {
+      addLog("Failed to copy text using execCommand.", "error");
+    } finally {
+      document.body.removeChild(textArea);
+    }
+  };
+
+  // Simple Markdown to HTML parser for rendering the results nicely
+  const renderMarkdown = (text) => {
+    if (!text) return null;
+    
+    // Split by paragraphs
+    const paragraphs = text.split('\n\n');
+    
+    return paragraphs.map((para, i) => {
+      // Headers
+      if (para.startsWith('# ')) return <h1 key={i} className="text-2xl font-bold mt-6 mb-4 text-slate-800">{para.replace('# ', '')}</h1>;
+      if (para.startsWith('## ')) return <h2 key={i} className="text-xl font-bold mt-5 mb-3 text-slate-800">{para.replace('## ', '')}</h2>;
+      if (para.startsWith('### ')) return <h3 key={i} className="text-lg font-bold mt-4 mb-2 text-slate-800">{para.replace('### ', '')}</h3>;
+      
+      // Basic bold and italic parsing for inline text
+      let htmlContent = para
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/__(.*?)__/g, '<strong>$1</strong>')
+        .replace(/_(.*?)_/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code class="bg-slate-100 px-1 py-0.5 rounded text-sm font-mono text-slate-800">$1</code>');
+
+      // List items (simple implementation)
+      if (para.trim().startsWith('* ') || para.trim().startsWith('- ')) {
+        const items = para.split('\n').map(item => item.replace(/^[\*\-]\s/, ''));
+        return (
+          <ul key={i} className="list-disc pl-6 mb-4 space-y-1 text-slate-700 leading-relaxed">
+            {items.map((item, j) => (
+              <li key={j} dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') }} />
+            ))}
+          </ul>
+        );
+      }
+      
+      // Numbered lists
+      if (/^\d+\.\s/.test(para.trim())) {
+         const items = para.split('\n');
+         return (
+             <ol key={i} className="list-decimal pl-6 mb-4 space-y-1 text-slate-700 leading-relaxed">
+                 {items.map((item, j) => (
+                     <li key={j} dangerouslySetInnerHTML={{ __html: item.replace(/^\d+\.\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') }} />
+                 ))}
+             </ol>
+         )
+      }
+
+      // Standard paragraph
+      return (
+        <p key={i} 
+           className="mb-4 text-slate-700 leading-relaxed" 
+           dangerouslySetInnerHTML={{ __html: htmlContent }} 
+        />
+      );
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
+          <div className="bg-blue-600 p-2 rounded-lg text-white">
+            <Search size={24} />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">DeepResearch AI</h1>
+            <p className="text-xs text-slate-500 font-medium">Powered by Gemini & Google Search</p>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+        
+        {/* Input Section */}
+        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-6 space-y-6">
+            <div>
+              <label htmlFor="query" className="block text-sm font-semibold text-slate-700 mb-2">
+                What would you like to research?
+              </label>
+              <textarea
+                id="query"
+                rows="3"
+                className="w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-slate-50 p-4 text-slate-900 resize-none transition-colors border"
+                placeholder="Ask any question (e.g., What are the latest advancements in solid-state batteries?)"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    handleResearch();
+                  }
+                }}
+              />
+              <p className="text-xs text-slate-400 mt-2 text-right">Press Ctrl+Enter or Cmd+Enter to submit</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
+              
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="space-y-1">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Mode</span>
+                  <div className="flex bg-slate-200/50 p-1 rounded-lg">
+                    <button
+                      onClick={() => setMode('summary')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'summary' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      <FileText size={16} />
+                      Summary
+                    </button>
+                    <button
+                      onClick={() => setMode('essay')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${mode === 'essay' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      <BookOpen size={16} />
+                      Essay
+                    </button>
+                  </div>
+                </div>
+
+                {mode === 'essay' && (
+                  <div className="space-y-1 animate-in fade-in slide-in-from-left-4 duration-300">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Length</span>
+                    <select
+                      value={essayLength}
+                      onChange={(e) => setEssayLength(e.target.value)}
+                      className="block w-full rounded-lg border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring-blue-500 outline-none border text-slate-700"
+                    >
+                      <option value="short">Short (~300 words)</option>
+                      <option value="medium">Medium (~600 words)</option>
+                      <option value="long">Long (~1000 words)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleResearch}
+                disabled={isLoading}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-8 py-3 rounded-xl font-semibold transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-sm hover:shadow"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Researching...
+                  </>
+                ) : (
+                  <>
+                    <Search size={18} />
+                    Begin Research
+                  </>
+                )}
+              </button>
+
+            </div>
+          </div>
+        </section>
+
+        {/* Results Section */}
+        {result && (
+          <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                {mode === 'summary' ? <FileText size={20} className="text-blue-500" /> : <BookOpen size={20} className="text-blue-500" />}
+                Research {mode === 'summary' ? 'Summary' : 'Essay'}
+              </h2>
+              <span className="text-xs font-medium px-2.5 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
+                <Check size={12} /> Search Grounded
+              </span>
+            </div>
+            
+            <div className="p-6 sm:p-8 md:p-10">
+              <div className="prose prose-slate max-w-none">
+                {renderMarkdown(result)}
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border-t border-slate-100 p-4 flex justify-end">
+              <button
+                onClick={handleCopy}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  copied 
+                    ? 'bg-green-100 text-green-700 border border-green-200' 
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-blue-600 shadow-sm'
+                }`}
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? 'Copied to Clipboard!' : 'Copy to Clipboard'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* Sources Section */}
+        {sources.length > 0 && (
+          <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in duration-500 delay-150">
+            <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+              <h3 className="text-md font-semibold text-slate-800 flex items-center gap-2">
+                <Link2 size={18} className="text-blue-500" />
+                Sources Consulted
+              </h3>
+            </div>
+            <div className="p-6">
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {sources.map((source, index) => (
+                  <li key={index}>
+                    <a 
+                      href={source.uri} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors group h-full"
+                    >
+                      <div className="mt-0.5 bg-blue-100 text-blue-600 p-1.5 rounded-md group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <Link2 size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-700 group-hover:text-blue-700 line-clamp-2">
+                          {source.title}
+                        </p>
+                        <p className="text-xs text-slate-400 truncate mt-1">
+                          {source.uri}
+                        </p>
+                      </div>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+
+      </main>
+
+      {/* Error Logger Terminal */}
+      <section className="fixed bottom-0 left-0 right-0 z-50">
+        <div className="bg-slate-900 border-t-2 border-slate-700 text-slate-300 shadow-2xl max-h-64 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <Terminal size={14} className="text-slate-400" />
+              <span className="text-xs font-mono font-semibold tracking-wider text-slate-400">SYSTEM LOGGER</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-mono text-slate-600">{logs.length} events logged</span>
+              <button 
+                onClick={clearLogs}
+                title="Clear Logs"
+                className="text-slate-500 hover:text-red-400 transition-colors"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1.5 min-h-[100px] max-h-[200px]">
+            {logs.length === 0 ? (
+              <div className="text-slate-600 italic">No system events or errors logged yet. Waiting for activity...</div>
+            ) : (
+              logs.map((log) => (
+                <div key={log.id} className="flex items-start gap-3 hover:bg-slate-800/50 py-0.5 px-1 rounded">
+                  <span className="text-slate-500 shrink-0">[{log.time}]</span>
+                  {log.type === 'error' && <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />}
+                  {log.type === 'warning' && <AlertCircle size={14} className="text-yellow-400 shrink-0 mt-0.5" />}
+                  {log.type === 'success' && <Check size={14} className="text-green-400 shrink-0 mt-0.5" />}
+                  {log.type === 'info' && <span className="text-blue-400 shrink-0 mt-0.5 font-bold">{">"}</span>}
+                  
+                  <span className={`break-words ${
+                    log.type === 'error' ? 'text-red-300' :
+                    log.type === 'warning' ? 'text-yellow-300' :
+                    log.type === 'success' ? 'text-green-300' :
+                    'text-slate-300'
+                  }`}>
+                    {log.msg}
+                  </span>
+                </div>
+              ))
+            )}
+            <div ref={logsEndRef} />
+          </div>
+        </div>
+      </section>
+
+    </div>
+  );
+}
 
