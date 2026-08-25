@@ -8,24 +8,39 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Marked.js for professional Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        /* Custom scrollbar for logger */
         #logs-container::-webkit-scrollbar { width: 6px; }
         #logs-container::-webkit-scrollbar-track { background: #0f172a; }
         #logs-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        .prose h1 { font-size: 1.75rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 1rem; color: #1e293b; }
+        .prose h2 { font-size: 1.35rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.75rem; color: #1e293b; }
+        .prose h3 { font-size: 1.1rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #1e293b; }
+        .prose p { margin-bottom: 1rem; line-height: 1.7; color: #334155; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #334155; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; color: #334155; }
+        .prose li { margin-bottom: 0.35rem; }
+        .prose strong { color: #0f172a; font-weight: 600; }
     </style>
 </head>
-<body class="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+<body class="min-h-screen bg-slate-50 font-sans text-slate-900 pb-28">
 
     <!-- Header -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div class="max-w-5xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-3">
-            <div class="bg-blue-600 p-2 rounded-lg text-white">
-                <i data-lucide="search" class="w-6 h-6"></i>
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white shadow">
+                    <i data-lucide="search" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900">DeepResearch AI</h1>
+                    <p class="text-xs text-slate-500 font-medium">Powered by Gemini AI & Vercel Backend</p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-xl font-bold text-slate-900">DeepResearch AI</h1>
-                <p class="text-xs text-slate-500 font-medium">Powered by Gemini & Google Search</p>
+            <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+                <span>Secure Proxy Active</span>
             </div>
         </div>
     </header>
@@ -43,7 +58,7 @@
                         id="query"
                         rows="3"
                         class="w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-slate-50 p-4 text-slate-900 resize-none transition-colors border outline-none"
-                        placeholder="Ask any question (e.g., What are the latest advancements in solid-state batteries?)"
+                        placeholder="Ask any question (e.g., Does the pink tax really exist? What are quantum computers?)"
                     ></textarea>
                     <p class="text-xs text-slate-400 mt-2 text-right">Press Ctrl+Enter or Cmd+Enter to submit</p>
                 </div>
@@ -63,13 +78,13 @@
                             </div>
                         </div>
 
-                        <!-- Length Selector (Hidden by default) -->
+                        <!-- Length Selector -->
                         <div id="length-container" class="space-y-1 hidden">
                             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Length</span>
                             <select id="essay-length" class="block w-full rounded-lg border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring-blue-500 outline-none border text-slate-700">
                                 <option value="short">Short (~300 words)</option>
                                 <option value="medium" selected>Medium (~600 words)</option>
-                                <option value="long">Long (~1000 words)</option>
+                                <option value="long">Long (~1000+ words)</option>
                             </select>
                         </div>
                     </div>
@@ -82,7 +97,7 @@
             </div>
         </section>
 
-        <!-- Results Section (Hidden by default) -->
+        <!-- Results Section -->
         <section id="result-section" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4 flex items-center justify-between">
                 <h2 id="result-title" class="text-lg font-semibold text-slate-800 flex items-center gap-2">
@@ -90,12 +105,12 @@
                     <span>Research Summary</span>
                 </h2>
                 <span class="text-xs font-medium px-2.5 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
-                    <i data-lucide="check" class="w-3 h-3"></i> Search Grounded
+                    <i data-lucide="check" class="w-3 h-3"></i> AI Analysis Complete
                 </span>
             </div>
             
             <div class="p-6 sm:p-8 md:p-10">
-                <div id="result-content" class="prose prose-slate max-w-none"></div>
+                <div id="result-content" class="prose max-w-none"></div>
             </div>
 
             <div class="bg-slate-50 border-t border-slate-100 p-4 flex justify-end">
@@ -106,25 +121,23 @@
             </div>
         </section>
 
-        <!-- Sources Section (Hidden by default) -->
+        <!-- Sources / References Section -->
         <section id="sources-section" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
                 <h3 class="text-md font-semibold text-slate-800 flex items-center gap-2">
                     <i data-lucide="link-2" class="w-[18px] h-[18px] text-blue-500"></i>
-                    Sources Consulted
+                    Sources & Data References
                 </h3>
             </div>
             <div class="p-6">
-                <ul id="sources-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <!-- Sources injected here via JS -->
-                </ul>
+                <div id="sources-content" class="prose max-w-none text-sm text-slate-600"></div>
             </div>
         </section>
 
     </main>
 
     <!-- Error Logger Terminal -->
-    <section class="fixed bottom-0 left-0 right-0 z-50">
+    <section class="fixed bottom-0 left-0 right-0 z-30">
         <div class="bg-slate-900 border-t-2 border-slate-700 text-slate-300 shadow-2xl max-h-64 flex flex-col">
             <div class="flex items-center justify-between px-4 py-2 bg-slate-950 border-b border-slate-800">
                 <div class="flex items-center gap-2">
@@ -139,29 +152,25 @@
                 </div>
             </div>
             
-            <div id="logs-container" class="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1.5 min-h-[100px] max-h-[200px]">
+            <div id="logs-container" class="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1.5 min-h-[90px] max-h-[170px]">
                 <div id="empty-log" class="text-slate-600 italic">No system events or errors logged yet. Waiting for activity...</div>
             </div>
         </div>
     </section>
 
-    <!-- Application Logic -->
+    <!-- Application Script -->
     <script>
-        // Initialize Icons
         lucide.createIcons();
 
-        // Application State
         const state = {
-            mode: 'summary', // 'summary' or 'essay'
+            mode: localStorage.getItem('dr_mode') || 'summary',
             isLoading: false,
-            resultText: '',
+            resultText: localStorage.getItem('dr_result') || '',
+            sourcesText: localStorage.getItem('dr_sources') || '',
             logsCount: 0
         };
 
-        const apiKey = "AQ.Ab8RN6J-Qm8YgHSPEcqlH2ohSEj1tUw4T3qtZbhhublrL-i1hA"; // API key is provided by the execution environment
-
-        // DOM Elements
-        const el = {
+        const dom = {
             query: document.getElementById('query'),
             btnSummary: document.getElementById('btn-summary'),
             btnEssay: document.getElementById('btn-essay'),
@@ -177,20 +186,27 @@
             copyIcon: document.getElementById('copy-icon'),
             copyText: document.getElementById('copy-text'),
             sourcesSection: document.getElementById('sources-section'),
-            sourcesList: document.getElementById('sources-list'),
+            sourcesContent: document.getElementById('sources-content'),
             logsContainer: document.getElementById('logs-container'),
             emptyLog: document.getElementById('empty-log'),
             logCount: document.getElementById('log-count'),
             btnClearLogs: document.getElementById('btn-clear-logs')
         };
 
-        // Logger Logic
+        if (state.mode === 'essay') setModeUI('essay');
+        if (state.resultText) {
+            dom.resultContent.innerHTML = marked.parse(state.resultText);
+            dom.resultSection.classList.remove('hidden');
+        }
+        if (state.sourcesText) {
+            dom.sourcesContent.innerHTML = marked.parse(state.sourcesText);
+            dom.sourcesSection.classList.remove('hidden');
+        }
+
         function addLog(msg, type = 'info') {
-            if (el.emptyLog) {
-                el.emptyLog.style.display = 'none';
-            }
+            if (dom.emptyLog) dom.emptyLog.style.display = 'none';
             state.logsCount++;
-            el.logCount.textContent = `${state.logsCount} events logged`;
+            dom.logCount.textContent = `${state.logsCount} events logged`;
 
             const time = new Date().toLocaleTimeString();
             let colorCls = 'text-slate-300';
@@ -215,255 +231,141 @@
                 <span class="break-words ${colorCls}">${msg}</span>
             `;
             
-            el.logsContainer.appendChild(logEntry);
+            dom.logsContainer.appendChild(logEntry);
             lucide.createIcons({ root: logEntry });
-            el.logsContainer.scrollTop = el.logsContainer.scrollHeight;
+            dom.logsContainer.scrollTop = dom.logsContainer.scrollHeight;
         }
 
-        el.btnClearLogs.addEventListener('click', () => {
-            el.logsContainer.innerHTML = '<div id="empty-log" class="text-slate-600 italic">No system events or errors logged yet. Waiting for activity...</div>';
-            el.emptyLog = document.getElementById('empty-log');
+        dom.btnClearLogs.addEventListener('click', () => {
+            dom.logsContainer.innerHTML = '<div id="empty-log" class="text-slate-600 italic">No system events or errors logged yet. Waiting for activity...</div>';
+            dom.emptyLog = document.getElementById('empty-log');
             state.logsCount = 0;
-            el.logCount.textContent = `0 events logged`;
+            dom.logCount.textContent = `0 events logged`;
         });
 
-        // Intercept Console Errors
         const originalConsoleError = console.error;
         console.error = (...args) => {
             addLog(`Console Error: ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`, 'error');
             originalConsoleError(...args);
         };
 
-        // Mode Switching Logic
-        function setMode(newMode) {
-            state.mode = newMode;
-            if (newMode === 'summary') {
-                el.btnSummary.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm";
-                el.btnEssay.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
-                el.lengthContainer.classList.add('hidden');
+        function setModeUI(mode) {
+            state.mode = mode;
+            localStorage.setItem('dr_mode', mode);
+            if (mode === 'summary') {
+                dom.btnSummary.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm";
+                dom.btnEssay.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
+                dom.lengthContainer.classList.add('hidden');
             } else {
-                el.btnEssay.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm";
-                el.btnSummary.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
-                el.lengthContainer.classList.remove('hidden');
+                dom.btnEssay.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm";
+                dom.btnSummary.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
+                dom.lengthContainer.classList.remove('hidden');
             }
         }
 
-        el.btnSummary.addEventListener('click', () => setMode('summary'));
-        el.btnEssay.addEventListener('click', () => setMode('essay'));
+        dom.btnSummary.addEventListener('click', () => setModeUI('summary'));
+        dom.btnEssay.addEventListener('click', () => setModeUI('essay'));
 
-        // Markdown Parser (Vanilla JS implementation)
-        function renderMarkdown(text) {
-            if (!text) return '';
-            const paragraphs = text.split('\n\n');
-            let html = '';
-
-            paragraphs.forEach(para => {
-                let p = para.trim();
-                if (!p) return;
-
-                // Headers
-                if (p.startsWith('# ')) { html += `<h1 class="text-2xl font-bold mt-6 mb-4 text-slate-800">${p.replace('# ', '')}</h1>`; return; }
-                if (p.startsWith('## ')) { html += `<h2 class="text-xl font-bold mt-5 mb-3 text-slate-800">${p.replace('## ', '')}</h2>`; return; }
-                if (p.startsWith('### ')) { html += `<h3 class="text-lg font-bold mt-4 mb-2 text-slate-800">${p.replace('### ', '')}</h3>`; return; }
-
-                // Basic Bold/Italic/Code styling
-                let content = p
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                    .replace(/__(.*?)__/g, '<strong>$1</strong>')
-                    .replace(/_(.*?)_/g, '<em>$1</em>')
-                    .replace(/`(.*?)`/g, '<code class="bg-slate-100 px-1 py-0.5 rounded text-sm font-mono text-slate-800">$1</code>');
-
-                // Lists
-                if (p.startsWith('* ') || p.startsWith('- ')) {
-                    const items = p.split('\n').map(item => item.replace(/^[\*\-]\s/, ''));
-                    html += `<ul class="list-disc pl-6 mb-4 space-y-1 text-slate-700 leading-relaxed">`;
-                    items.forEach(item => {
-                        let itemContent = item.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
-                        html += `<li>${itemContent}</li>`;
-                    });
-                    html += `</ul>`;
-                    return;
-                }
-
-                if (/^\d+\.\s/.test(p)) {
-                    const items = p.split('\n');
-                    html += `<ol class="list-decimal pl-6 mb-4 space-y-1 text-slate-700 leading-relaxed">`;
-                    items.forEach(item => {
-                        let itemContent = item.replace(/^\d+\.\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
-                        html += `<li>${itemContent}</li>`;
-                    });
-                    html += `</ol>`;
-                    return;
-                }
-
-                // Default Paragraph
-                html += `<p class="mb-4 text-slate-700 leading-relaxed">${content}</p>`;
-            });
-
-            return html;
-        }
-
-        // Exponential backoff fetch
-        async function fetchWithRetry(url, options, maxRetries = 5) {
-            const delays = [1000, 2000, 4000, 8000, 16000];
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) {
-                        const errData = await response.json().catch(() => ({}));
-                        throw new Error(`HTTP ${response.status}: ${errData.error?.message || 'Unknown API Error'}`);
-                    }
-                    return await response.json();
-                } catch (error) {
-                    if (i === maxRetries - 1) throw error;
-                    await new Promise(resolve => setTimeout(resolve, delays[i]));
-                }
-            }
-        }
-
-        // Research Logic
         async function handleResearch() {
-            const query = el.query.value.trim();
+            const query = dom.query.value.trim();
             if (!query) {
                 addLog("Please enter a question or topic to research.", "warning");
                 return;
             }
 
-            // Set UI to loading state
             state.isLoading = true;
-            el.btnSubmit.disabled = true;
-            el.submitIcon.setAttribute('data-lucide', 'loader-2');
-            el.submitIcon.classList.add('animate-spin');
-            el.submitText.textContent = 'Researching...';
+            dom.btnSubmit.disabled = true;
+            dom.submitIcon.setAttribute('data-lucide', 'loader-2');
+            dom.submitIcon.classList.add('animate-spin');
+            dom.submitText.textContent = 'Researching...';
             lucide.createIcons();
             
-            el.resultSection.classList.add('hidden');
-            el.sourcesSection.classList.add('hidden');
-            el.sourcesList.innerHTML = '';
+            dom.resultSection.classList.add('hidden');
+            dom.sourcesSection.classList.add('hidden');
             
             addLog(`Starting research for: "${query}" (Mode: ${state.mode})`, "info");
 
             try {
-                let systemPrompt = "";
-                if (state.mode === "summary") {
-                    systemPrompt = "You are a highly capable research assistant. Answer the user's question with a concise, accurate, and highly relevant summary. Prioritize factual accuracy and use the Google Search tool to find the most up-to-date information. Synthesize the findings into an easy-to-read format.";
-                } else {
-                    const length = el.essayLength.value;
-                    const lengthGuides = {
-                        short: "around 300-500 words",
-                        medium: "around 600-900 words",
-                        long: "around 1000-1500 words (very comprehensive)"
-                    };
-                    systemPrompt = `You are an expert academic essayist and researcher. Write a comprehensive essay answering the user's question. The desired length is ${lengthGuides[length]}. Structure the essay properly with an introduction, well-developed body paragraphs, and a clear conclusion. You MUST use the Google Search tool to gather accurate data, cite facts implicitly, and ensure high relevance to the prompt. Use markdown for headings and formatting.`;
-                }
-
-                const payload = {
-                    contents: [{ parts: [{ text: query }] }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
-                    tools: [{ google_search: {} }],
-                    generationConfig: { temperature: 0.2 }
-                };
-
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-                
-                const data = await fetchWithRetry(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
+                const response = await fetch('/api/research', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: query,
+                        mode: state.mode,
+                        length: dom.essayLength.value
+                    })
                 });
 
-                // Render Results
-                const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!textResponse) throw new Error("API returned an empty or malformed response.");
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Server error: ${response.status}`);
+                }
+
+                const fullText = data.text;
                 
-                state.resultText = textResponse;
-                el.resultContent.innerHTML = renderMarkdown(textResponse);
-                el.resultTitle.innerHTML = `
+                let mainContent = fullText;
+                let sourcesText = "";
+                const splitMarker = "### Sources & References";
+                if (fullText.includes(splitMarker)) {
+                    const parts = fullText.split(splitMarker);
+                    mainContent = parts[0].trim();
+                    sourcesText = parts[1].trim();
+                }
+
+                state.resultText = mainContent;
+                state.sourcesText = sourcesText;
+                localStorage.setItem('dr_result', mainContent);
+                localStorage.setItem('dr_sources', sourcesText);
+
+                dom.resultContent.innerHTML = marked.parse(mainContent);
+                dom.resultTitle.innerHTML = `
                     <i data-lucide="${state.mode === 'summary' ? 'file-text' : 'book-open'}" class="w-5 h-5 text-blue-500"></i>
                     <span>Research ${state.mode === 'summary' ? 'Summary' : 'Essay'}</span>
                 `;
-                el.resultSection.classList.remove('hidden');
+                dom.resultSection.classList.remove('hidden');
 
-                // Render Sources
-                const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
-                if (groundingMetadata?.groundingAttributions) {
-                    const uniqueSources = [];
-                    const seenUris = new Set();
-                    
-                    groundingMetadata.groundingAttributions.forEach(attr => {
-                        const uri = attr.web?.uri;
-                        const title = attr.web?.title;
-                        if (uri && !seenUris.has(uri)) {
-                            seenUris.add(uri);
-                            uniqueSources.push({ uri, title: title || uri });
-                        }
-                    });
-                    
-                    if (uniqueSources.length > 0) {
-                        uniqueSources.forEach(source => {
-                            const li = document.createElement('li');
-                            li.innerHTML = `
-                                <a href="${source.uri}" target="_blank" rel="noopener noreferrer" class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors group h-full">
-                                    <div class="mt-0.5 bg-blue-100 text-blue-600 p-1.5 rounded-md group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                        <i data-lucide="link-2" class="w-3.5 h-3.5"></i>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-slate-700 group-hover:text-blue-700 line-clamp-2">${source.title}</p>
-                                        <p class="text-xs text-slate-400 truncate mt-1">${source.uri}</p>
-                                    </div>
-                                </a>
-                            `;
-                            el.sourcesList.appendChild(li);
-                        });
-                        el.sourcesSection.classList.remove('hidden');
-                        addLog(`Research complete. Found ${uniqueSources.length} sources.`, "success");
-                    } else {
-                        addLog("Research complete. No specific web sources cited.", "success");
-                    }
-                } else {
-                    addLog("Research complete. No specific web sources cited.", "success");
+                if (sourcesText) {
+                    dom.sourcesContent.innerHTML = marked.parse(sourcesText);
+                    dom.sourcesSection.classList.remove('hidden');
                 }
 
-                lucide.createIcons(); // Re-initialize icons for new DOM elements
+                addLog("Research analysis completed successfully via secure proxy.", "success");
+                lucide.createIcons();
 
             } catch (error) {
                 addLog(`Research failed: ${error.message}`, "error");
-                el.resultContent.innerHTML = `<p class="text-red-500 font-semibold">An error occurred while researching.</p><p class="text-slate-600 mt-2">${error.message}</p><p class="text-slate-500 text-sm mt-4">Please check the error logger at the bottom of the page for more details.</p>`;
-                el.resultSection.classList.remove('hidden');
+                dom.resultContent.innerHTML = `<p class="text-red-600 font-semibold">An error occurred while researching.</p><p class="text-slate-600 mt-2">${error.message}</p>`;
+                dom.resultSection.classList.remove('hidden');
             } finally {
-                // Reset UI state
                 state.isLoading = false;
-                el.btnSubmit.disabled = false;
-                el.submitIcon.setAttribute('data-lucide', 'search');
-                el.submitIcon.classList.remove('animate-spin');
-                el.submitText.textContent = 'Begin Research';
+                dom.btnSubmit.disabled = false;
+                dom.submitIcon.setAttribute('data-lucide', 'search');
+                dom.submitIcon.classList.remove('animate-spin');
+                dom.submitText.textContent = 'Begin Research';
                 lucide.createIcons();
             }
         }
 
-        // Copy Logic
         function handleCopy() {
             if (!state.resultText) return;
-            
             const textArea = document.createElement("textarea");
-            textArea.value = state.resultText;
+            textArea.value = state.resultText + (state.sourcesText ? `\n\nSources & References:\n${state.sourcesText}` : '');
             document.body.appendChild(textArea);
             textArea.select();
             
             try {
                 document.execCommand('copy');
-                
-                el.btnCopy.className = "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-green-100 text-green-700 border border-green-200";
-                el.copyIcon.setAttribute('data-lucide', 'check');
-                el.copyText.textContent = "Copied to Clipboard!";
+                dom.btnCopy.className = "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-green-100 text-green-700 border border-green-200";
+                dom.copyIcon.setAttribute('data-lucide', 'check');
+                dom.copyText.textContent = "Copied to Clipboard!";
                 lucide.createIcons();
                 addLog("Content successfully copied to clipboard.", "info");
 
                 setTimeout(() => {
-                    el.btnCopy.className = "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-blue-600 shadow-sm";
-                    el.copyIcon.setAttribute('data-lucide', 'copy');
-                    el.copyText.textContent = "Copy to Clipboard";
+                    dom.btnCopy.className = "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-blue-600 shadow-sm";
+                    dom.copyIcon.setAttribute('data-lucide', 'copy');
+                    dom.copyText.textContent = "Copy to Clipboard";
                     lucide.createIcons();
                 }, 3000);
             } catch (err) {
@@ -473,15 +375,11 @@
             }
         }
 
-        // Event Listeners
-        el.btnSubmit.addEventListener('click', handleResearch);
-        el.btnCopy.addEventListener('click', handleCopy);
-        el.query.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                handleResearch();
-            }
+        dom.btnSubmit.addEventListener('click', handleResearch);
+        dom.btnCopy.addEventListener('click', handleCopy);
+        dom.query.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleResearch();
         });
-
     </script>
 </body>
 </html>
