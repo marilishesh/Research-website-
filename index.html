@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepResearch AI</title>
+    <title>DeepResearch AI Pro</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
@@ -34,16 +34,45 @@
                     <i data-lucide="search" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-slate-900">DeepResearch AI</h1>
-                    <p class="text-xs text-slate-500 font-medium">Powered by Gemini AI & Vercel Backend</p>
+                    <h1 class="text-xl font-bold text-slate-900">DeepResearch AI Pro</h1>
+                    <p class="text-xs text-slate-500 font-medium">Powered by Groq Llama 3.3 & Vercel</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-                <i data-lucide="shield-check" class="w-4 h-4"></i>
-                <span>Secure Proxy Active</span>
+            <div class="flex items-center gap-2">
+                <button id="btn-toggle-history" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
+                    <i data-lucide="history" class="w-4 h-4 text-slate-500"></i>
+                    <span>History</span>
+                </button>
+                <div class="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <span>Secure</span>
+                </div>
             </div>
         </div>
     </header>
+
+    <!-- History Drawer Modal -->
+    <div id="history-modal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden flex items-center justify-end p-0 sm:p-4">
+        <div class="bg-white h-full sm:h-auto sm:max-h-[85vh] w-full max-w-md sm:rounded-2xl shadow-xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+            <div class="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="history" class="w-5 h-5 text-blue-600"></i> Research History
+                </h3>
+                <button id="btn-close-history" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-3 divide-y divide-slate-100">
+                <div class="text-slate-400 text-sm italic text-center py-8">No saved research history yet.</div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                <button id="btn-clear-history" class="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Clear History
+                </button>
+                <span id="history-count" class="text-xs text-slate-400">0 items</span>
+            </div>
+        </div>
+    </div>
 
     <main class="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
         
@@ -58,37 +87,48 @@
                         id="query"
                         rows="3"
                         class="w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-slate-50 p-4 text-slate-900 resize-none transition-colors border outline-none"
-                        placeholder="Ask any question (e.g., Does the pink tax really exist? What are quantum computers?)"
+                        placeholder="Ask any question (e.g., How do black holes form? What causes inflation?)"
                     ></textarea>
                     <p class="text-xs text-slate-400 mt-2 text-right">Press Ctrl+Enter or Cmd+Enter to submit</p>
                 </div>
 
-                <div class="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <div class="flex flex-wrap items-center gap-4">
-                        <!-- Mode Selector -->
-                        <div class="space-y-1">
-                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Mode</span>
-                            <div class="flex bg-slate-200/50 p-1 rounded-lg">
-                                <button id="btn-summary" class="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm">
-                                    <i data-lucide="file-text" class="w-4 h-4"></i> Summary
-                                </button>
-                                <button id="btn-essay" class="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900">
-                                    <i data-lucide="book-open" class="w-4 h-4"></i> Essay
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Length Selector -->
-                        <div id="length-container" class="space-y-1 hidden">
-                            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Length</span>
-                            <select id="essay-length" class="block w-full rounded-lg border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring-blue-500 outline-none border text-slate-700">
-                                <option value="short">Short (~300 words)</option>
-                                <option value="medium" selected>Medium (~600 words)</option>
-                                <option value="long">Long (~1000+ words)</option>
-                            </select>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <!-- Mode Selector -->
+                    <div class="space-y-1">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Mode</span>
+                        <div class="flex bg-slate-200/50 p-1 rounded-lg">
+                            <button id="btn-summary" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm">
+                                <i data-lucide="file-text" class="w-4 h-4"></i> Summary
+                            </button>
+                            <button id="btn-essay" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900">
+                                <i data-lucide="book-open" class="w-4 h-4"></i> Essay
+                            </button>
                         </div>
                     </div>
 
+                    <!-- Tone Selector -->
+                    <div class="space-y-1">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Writing Tone</span>
+                        <select id="research-tone" class="block w-full rounded-lg border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring-blue-500 outline-none border text-slate-700">
+                            <option value="professional" selected>Professional & Clear</option>
+                            <option value="academic">Academic & Rigorous</option>
+                            <option value="casual">Casual & Simple</option>
+                            <option value="technical">Technical & Detailed</option>
+                        </select>
+                    </div>
+
+                    <!-- Length Selector (for Essay mode) -->
+                    <div id="length-container" class="space-y-1 hidden">
+                        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Length</span>
+                        <select id="essay-length" class="block w-full rounded-lg border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm focus:border-blue-500 focus:ring-blue-500 outline-none border text-slate-700">
+                            <option value="short">Short (~300 words)</option>
+                            <option value="medium" selected>Medium (~600 words)</option>
+                            <option value="long">Long (~1000+ words)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
                     <button id="btn-submit" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-8 py-3 rounded-xl font-semibold transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-sm hover:shadow">
                         <i data-lucide="search" class="w-[18px] h-[18px]" id="submit-icon"></i>
                         <span id="submit-text">Begin Research</span>
@@ -104,20 +144,32 @@
                     <i data-lucide="file-text" class="w-5 h-5 text-blue-500" id="result-icon"></i>
                     <span>Research Summary</span>
                 </h2>
-                <span class="text-xs font-medium px-2.5 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
-                    <i data-lucide="check" class="w-3 h-3"></i> AI Analysis Complete
-                </span>
+                <div class="flex items-center gap-2">
+                    <span id="status-badge" class="text-xs font-medium px-2.5 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
+                        <i data-lucide="check" class="w-3 h-3"></i> AI Analysis Complete
+                    </span>
+                    <button id="btn-refresh" title="Refresh / Retry Research" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors hidden">
+                        <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+                    </button>
+                </div>
             </div>
             
             <div class="p-6 sm:p-8 md:p-10">
                 <div id="result-content" class="prose max-w-none"></div>
             </div>
 
-            <div class="bg-slate-50 border-t border-slate-100 p-4 flex justify-end">
-                <button id="btn-copy" class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-blue-600 shadow-sm">
-                    <i data-lucide="copy" class="w-4 h-4" id="copy-icon"></i>
-                    <span id="copy-text">Copy to Clipboard</span>
-                </button>
+            <div class="bg-slate-50 border-t border-slate-100 p-4 flex flex-wrap justify-between items-center gap-3">
+                <span id="result-meta" class="text-xs text-slate-500 font-medium"></span>
+                <div class="flex items-center gap-3">
+                    <button id="btn-download" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-blue-600 shadow-sm">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Export as File</span>
+                    </button>
+                    <button id="btn-copy" class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-blue-600 shadow-sm">
+                        <i data-lucide="copy" class="w-4 h-4" id="copy-icon"></i>
+                        <span id="copy-text">Copy to Clipboard</span>
+                    </button>
+                </div>
             </div>
         </section>
 
@@ -167,6 +219,7 @@
             isLoading: false,
             resultText: localStorage.getItem('dr_result') || '',
             sourcesText: localStorage.getItem('dr_sources') || '',
+            currentQuery: localStorage.getItem('dr_query') || '',
             logsCount: 0
         };
 
@@ -176,32 +229,48 @@
             btnEssay: document.getElementById('btn-essay'),
             lengthContainer: document.getElementById('length-container'),
             essayLength: document.getElementById('essay-length'),
+            researchTone: document.getElementById('research-tone'),
             btnSubmit: document.getElementById('btn-submit'),
             submitIcon: document.getElementById('submit-icon'),
             submitText: document.getElementById('submit-text'),
             resultSection: document.getElementById('result-section'),
             resultTitle: document.getElementById('result-title'),
             resultContent: document.getElementById('result-content'),
+            resultMeta: document.getElementById('result-meta'),
             btnCopy: document.getElementById('btn-copy'),
             copyIcon: document.getElementById('copy-icon'),
             copyText: document.getElementById('copy-text'),
+            btnDownload: document.getElementById('btn-download'),
             sourcesSection: document.getElementById('sources-section'),
             sourcesContent: document.getElementById('sources-content'),
             logsContainer: document.getElementById('logs-container'),
             emptyLog: document.getElementById('empty-log'),
             logCount: document.getElementById('log-count'),
-            btnClearLogs: document.getElementById('btn-clear-logs')
+            btnClearLogs: document.getElementById('btn-clear-logs'),
+            btnRefresh: document.getElementById('btn-refresh'),
+            statusBadge: document.getElementById('status-badge'),
+            historyModal: document.getElementById('history-modal'),
+            btnToggleHistory: document.getElementById('btn-toggle-history'),
+            btnCloseHistory: document.getElementById('btn-close-history'),
+            historyList: document.getElementById('history-list'),
+            historyCount: document.getElementById('history-count'),
+            btnClearHistory: document.getElementById('btn-clear-history')
         };
 
         if (state.mode === 'essay') setModeUI('essay');
+        if (state.currentQuery) dom.query.value = state.currentQuery;
         if (state.resultText) {
             dom.resultContent.innerHTML = marked.parse(state.resultText);
             dom.resultSection.classList.remove('hidden');
+            dom.btnRefresh.classList.remove('hidden');
+            dom.resultMeta.textContent = `Topic: "${state.currentQuery}"`;
         }
         if (state.sourcesText) {
             dom.sourcesContent.innerHTML = marked.parse(state.sourcesText);
             dom.sourcesSection.classList.remove('hidden');
         }
+
+        renderHistory();
 
         function addLog(msg, type = 'info') {
             if (dom.emptyLog) dom.emptyLog.style.display = 'none';
@@ -253,18 +322,85 @@
             state.mode = mode;
             localStorage.setItem('dr_mode', mode);
             if (mode === 'summary') {
-                dom.btnSummary.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm";
-                dom.btnEssay.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
+                dom.btnSummary.className = "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm";
+                dom.btnEssay.className = "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
                 dom.lengthContainer.classList.add('hidden');
             } else {
-                dom.btnEssay.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm";
-                dom.btnSummary.className = "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
+                dom.btnEssay.className = "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all bg-white text-blue-700 shadow-sm";
+                dom.btnSummary.className = "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
                 dom.lengthContainer.classList.remove('hidden');
             }
         }
 
         dom.btnSummary.addEventListener('click', () => setModeUI('summary'));
         dom.btnEssay.addEventListener('click', () => setModeUI('essay'));
+
+        // History Management
+        dom.btnToggleHistory.addEventListener('click', () => dom.historyModal.classList.remove('hidden'));
+        dom.btnCloseHistory.addEventListener('click', () => dom.historyModal.classList.add('hidden'));
+
+        function saveToHistory(query, text, sources, mode) {
+            let history = JSON.parse(localStorage.getItem('dr_history') || '[]');
+            history.unshift({ query, text, sources, mode, date: new Date().toLocaleDateString() });
+            if (history.length > 15) history.pop(); // Keep max 15
+            localStorage.setItem('dr_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            let history = JSON.parse(localStorage.getItem('dr_history') || '[]');
+            dom.historyCount.textContent = `${history.length} items`;
+            if (history.length === 0) {
+                dom.historyList.innerHTML = '<div class="text-slate-400 text-sm italic text-center py-8">No saved research history yet.</div>';
+                return;
+            }
+
+            dom.historyList.innerHTML = history.map((item, idx) => `
+                <div class="p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors space-y-1" onclick="loadHistoryItem(${idx})">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-700 rounded uppercase">${item.mode}</span>
+                        <span class="text-[10px] text-slate-400">${item.date}</span>
+                    </div>
+                    <p class="text-sm font-medium text-slate-800 line-clamp-2">${item.query}</p>
+                </div>
+            `).join('');
+        }
+
+        window.loadHistoryItem = function(idx) {
+            let history = JSON.parse(localStorage.getItem('dr_history') || '[]');
+            const item = history[idx];
+            if (!item) return;
+
+            dom.query.value = item.query;
+            state.resultText = item.text;
+            state.sourcesText = item.sources;
+            state.currentQuery = item.query;
+
+            localStorage.setItem('dr_result', item.text);
+            localStorage.setItem('dr_sources', item.sources);
+            localStorage.setItem('dr_query', item.query);
+
+            dom.resultContent.innerHTML = marked.parse(item.text);
+            dom.resultMeta.textContent = `Topic: "${item.query}"`;
+            dom.resultSection.classList.remove('hidden');
+            dom.btnRefresh.classList.remove('hidden');
+
+            if (item.sources) {
+                dom.sourcesContent.innerHTML = marked.parse(item.sources);
+                dom.sourcesSection.classList.remove('hidden');
+            } else {
+                dom.sourcesSection.classList.add('hidden');
+            }
+
+            dom.historyModal.classList.add('hidden');
+            addLog(`Loaded historical research for: "${item.query}"`, "success");
+        };
+
+        dom.btnClearHistory.addEventListener('click', () => {
+            localStorage.removeItem('dr_history');
+            renderHistory();
+            addLog("Research history cleared.", "info");
+        });
 
         async function handleResearch() {
             const query = dom.query.value.trim();
@@ -273,17 +409,21 @@
                 return;
             }
 
+            state.currentQuery = query;
+            localStorage.setItem('dr_query', query);
+
             state.isLoading = true;
             dom.btnSubmit.disabled = true;
             dom.submitIcon.setAttribute('data-lucide', 'loader-2');
             dom.submitIcon.classList.add('animate-spin');
             dom.submitText.textContent = 'Researching...';
+            dom.btnRefresh.classList.add('hidden');
             lucide.createIcons();
             
             dom.resultSection.classList.add('hidden');
             dom.sourcesSection.classList.add('hidden');
             
-            addLog(`Starting research for: "${query}" (Mode: ${state.mode})`, "info");
+            addLog(`Starting research for: "${query}" (Mode: ${state.mode}, Tone: ${dom.researchTone.value})`, "info");
 
             try {
                 const response = await fetch('/api/research', {
@@ -292,9 +432,15 @@
                     body: JSON.stringify({
                         query: query,
                         mode: state.mode,
-                        length: dom.essayLength.value
+                        length: dom.essayLength.value,
+                        tone: dom.researchTone.value
                     })
                 });
+
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Received non-JSON response from server.");
+                }
 
                 const data = await response.json();
 
@@ -318,11 +464,17 @@
                 localStorage.setItem('dr_result', mainContent);
                 localStorage.setItem('dr_sources', sourcesText);
 
+                saveToHistory(query, mainContent, sourcesText, state.mode);
+
                 dom.resultContent.innerHTML = marked.parse(mainContent);
                 dom.resultTitle.innerHTML = `
                     <i data-lucide="${state.mode === 'summary' ? 'file-text' : 'book-open'}" class="w-5 h-5 text-blue-500"></i>
                     <span>Research ${state.mode === 'summary' ? 'Summary' : 'Essay'}</span>
                 `;
+                dom.resultMeta.textContent = `Topic: "${query}"`;
+                dom.statusBadge.className = "text-xs font-medium px-2.5 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1";
+                dom.statusBadge.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> AI Analysis Complete';
+                dom.btnRefresh.classList.remove('hidden');
                 dom.resultSection.classList.remove('hidden');
 
                 if (sourcesText) {
@@ -330,12 +482,15 @@
                     dom.sourcesSection.classList.remove('hidden');
                 }
 
-                addLog("Research analysis completed successfully via secure proxy.", "success");
+                addLog("Research analysis completed successfully.", "success");
                 lucide.createIcons();
 
             } catch (error) {
                 addLog(`Research failed: ${error.message}`, "error");
                 dom.resultContent.innerHTML = `<p class="text-red-600 font-semibold">An error occurred while researching.</p><p class="text-slate-600 mt-2">${error.message}</p>`;
+                dom.statusBadge.className = "text-xs font-medium px-2.5 py-1 bg-red-100 text-red-700 rounded-full flex items-center gap-1";
+                dom.statusBadge.innerHTML = '<i data-lucide="alert-circle" class="w-3 h-3"></i> Error Occurred';
+                dom.btnRefresh.classList.remove('hidden');
                 dom.resultSection.classList.remove('hidden');
             } finally {
                 state.isLoading = false;
@@ -358,7 +513,7 @@
                 document.execCommand('copy');
                 dom.btnCopy.className = "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-green-100 text-green-700 border border-green-200";
                 dom.copyIcon.setAttribute('data-lucide', 'check');
-                dom.copyText.textContent = "Copied to Clipboard!";
+                dom.copyText.textContent = "Copied!";
                 lucide.createIcons();
                 addLog("Content successfully copied to clipboard.", "info");
 
@@ -375,8 +530,25 @@
             }
         }
 
+        function handleDownload() {
+            if (!state.resultText) return;
+            const content = `# Research Report: ${state.currentQuery}\n\n${state.resultText}\n\n${state.sourcesText ? `## Sources & References\n${state.sourcesText}` : ''}`;
+            const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${state.currentQuery.slice(0, 30).replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            addLog("Research report exported successfully as a markdown file.", "success");
+        }
+
         dom.btnSubmit.addEventListener('click', handleResearch);
+        dom.btnRefresh.addEventListener('click', handleResearch);
         dom.btnCopy.addEventListener('click', handleCopy);
+        dom.btnDownload.addEventListener('click', handleDownload);
         dom.query.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleResearch();
         });
