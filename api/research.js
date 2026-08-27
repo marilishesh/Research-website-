@@ -5,6 +5,7 @@ export default async function handler(req, res) {
 
   try {
     const { query, mode, length } = req.body || {};
+    // Checks both GEMINI_API_KEY or GROQ_API_KEY so it works no matter what you named it in Vercel
     let apiKey = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
@@ -29,7 +30,6 @@ export default async function handler(req, res) {
       systemPrompt = `You are an expert academic essayist and researcher. Write a comprehensive, well-structured essay answering the user's question. The desired length is ${lengthGuides[length] || 'around 600 words'}. Include an introduction, deep body paragraphs, and a clear conclusion. Format with professional Markdown headings. At the very end of your essay under a heading '### Sources & References', list the credible academic sources, organizations, or websites that support these findings.`;
     }
 
-    // Call Groq API (Fast, Free, and reliable)
     const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
